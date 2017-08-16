@@ -1,6 +1,7 @@
 #[macro_use] extern crate nom;
 #[macro_use] extern crate clap;
 extern crate time;
+extern crate filetime;
 
 pub mod parser;
 use parser::*;
@@ -111,12 +112,21 @@ fn main() {
                     for file in files {
                         let mut output_file = output_dir.join(file.filename.clone());
                         output_file.set_extension(file.file_type.extension());
-                        //println!("{:?}", output_file);
-                        let mut file_handle = File::create(output_file).unwrap();
-                        reader.seek(SeekFrom::Start(file.offset as u64));
-                        let mut buf = vec![0; file.size as usize];
-                        reader.read_exact(&mut buf[..]);
-                        file_handle.write_all(buf.as_mut());
+                        println!("Writing {}", output_file.display());
+                        {
+                            let mut file_handle = File::create(output_file.clone()).unwrap();
+                            reader.seek(SeekFrom::Start(file.offset as u64));
+                            let mut buf = vec![0; file.size as usize];
+                            reader.read_exact(&mut buf[..]);
+                            file_handle.write_all(buf.as_mut());
+                        }
+                        if file.timestamp != 0 {
+                            let metadata = std::fs::metadata(output_file.clone()).unwrap();
+                            filetime::set_file_times(output_file.clone(),
+                                                     filetime::FileTime::from_last_access_time(&metadata),
+                                                     filetime::FileTime::from_seconds_since_1970(file.timestamp as u64, 0));
+                        }
+
                     }
                 },
                 Err(err) => {
