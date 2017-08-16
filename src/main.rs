@@ -48,6 +48,7 @@ fn main() {
             (@setting ArgRequiredElseHelp)
             (@arg FILE: +required {file_still_exists} "File to extract")
             (@arg FOLDER: +required "Folder to extract to")
+            (@arg modtimes: -m --no-modtimes "Don't export file modification times")
         )
     ).get_matches();
 
@@ -120,7 +121,7 @@ fn main() {
                             reader.read_exact(&mut buf[..]);
                             file_handle.write_all(buf.as_mut());
                         }
-                        if file.timestamp != 0 {
+                        if !matches.is_present("modtimes") && file.timestamp != 0 {
                             let metadata = std::fs::metadata(output_file.clone()).unwrap();
                             filetime::set_file_times(output_file.clone(),
                                                      filetime::FileTime::from_last_access_time(&metadata),
