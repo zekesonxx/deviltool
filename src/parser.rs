@@ -1,3 +1,5 @@
+
+use std::fmt;
 use nom::{le_u16, le_u32};
 
 #[derive(Debug, PartialEq)]
@@ -13,7 +15,7 @@ pub struct DDMainHeader {
 #[derive(Debug, PartialEq)]
 pub struct DDSubFileHeader {
     /// File type
-    pub file_type: u16, // seems to be 0x20 for audio, and 0x10/0x11 and others for textures (dd), and 0x00 for the end of the header lump (for the first invalid fileheader)
+    pub file_type: DDFiletype,
     /// Filename
     pub filename: String,
     /// File's position (offset in bytes from the beginning of the file)
@@ -23,6 +25,38 @@ pub struct DDSubFileHeader {
     /// Unix timestamp.
     /// File creation/modification times?
     pub timestamp: u32
+}
+
+// seems to be 0x20 for audio, and 0x10/0x11 and others for textures (dd), and 0x00 for the end of the header lump (for the first invalid fileheader)
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum DDFiletype {
+    /// 0x20, little-endian WAVE audio, 44100 Hz 16 bit PCM
+    ///
+    /// `file` output:
+    ///
+    /// audio/andrasimpact.wav: RIFF (little-endian) data, WAVE audio, Microsoft PCM, 16 bit, stereo 44100 Hz
+    WavAudio,
+    Unknown(u16)
+}
+
+impl DDFiletype {
+    pub fn new(input: u16) -> Self {
+        use DDFiletype::*;
+        match input {
+            0x20 => WavAudio,
+            _ => Unknown(input)
+        }
+    }
+}
+
+impl fmt::Display for DDFiletype {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use DDFiletype::*;
+        match *self {
+            WavAudio => write!(f, "wav audio"),
+            Unknown(t) => write!(f, "unknown ({:#X})", t)
+        }
+    }
 }
 
 named!(mainheader<DDMainHeader>,
@@ -44,7 +78,7 @@ named!(subheader<DDSubFileHeader>,
         size: le_u32 >>
         timestamp: le_u32 >>
         (DDSubFileHeader {
-            file_type: file_type,
+            file_type: DDFiletype::new(file_type),
             filename: String::from_utf8_lossy(filename).into_owned(),
             offset: offset,
             size: size,
