@@ -48,7 +48,8 @@ fn main() {
             (@setting ArgRequiredElseHelp)
             (@arg FILE: +required {file_still_exists} "File to extract")
             (@arg FOLDER: +required "Folder to extract to")
-            (@arg modtimes: -m --no-modtimes "Don't export file modification times")
+            (@arg modtimes: -m --nomodtimes "Don't export file modification times")
+            (@arg nofolders: -f --nofolders "Don't automatically create subfolders for output")
         )
     ).get_matches();
 
@@ -101,16 +102,32 @@ fn main() {
         },
         ("extract", Some(matches)) => {
             // make sure we have somewhere to put the files
-            let output_dir = std::path::PathBuf::from(matches.value_of("FOLDER").unwrap());
+            let mut output_dir = std::path::PathBuf::from(matches.value_of("FOLDER").unwrap());
             std::fs::create_dir_all(output_dir.clone());
 
             let f = File::open(matches.value_of("FILE").unwrap()).unwrap();
             let mut reader = BufReader::new(f);
+            let mut firstfolder = true;
             match parser::read_header(&mut reader) {
                 Ok(data) => {
                     let header: DDMainHeader = data.0;
-                    let files: Vec<DDSubFileHeader> = data.1;
+                    let mut files: Vec<DDSubFileHeader> = data.1;
+                    if !matches.is_present("nofolders") { files.reverse(); }
                     for file in files {
+                        if file.file_type == DDFiletype::FolderMarker {
+                            if matches.is_present("nofolders") {
+                                println!("Ignoring folder marker {}", file.filename);
+                            } else {
+                                if !firstfolder {
+                                    output_dir.pop();
+                                } else {
+                                    firstfolder = false;
+                                }
+                                output_dir.push(file.filename.clone());
+                                std::fs::create_dir_all(output_dir.clone());
+                            }
+                            continue;
+                        }
                         let mut output_file = output_dir.join(file.filename.clone());
                         output_file.set_extension(file.file_type.extension());
                         println!("Writing {}", output_file.display());
