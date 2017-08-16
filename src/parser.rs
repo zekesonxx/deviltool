@@ -42,6 +42,14 @@ pub enum DDFiletype {
     WavAudio,
     /// 0x80, shader text file of some sort
     ShaderText,
+    /// 0x10, GLSL with some bytes at the beginning
+    WeirdGLSL,
+    /// 0x01, Some sort of texture data
+    Texture1,
+    /// 0x02, Some sort of texture data
+    Texture2,
+    /// 0x11, Folder Marker. Probably.
+    FolderMarker,
     Unknown(u16)
 }
 
@@ -51,6 +59,10 @@ impl DDFiletype {
         match input {
             0x20 => WavAudio,
             0x80 => ShaderText,
+            0x10 => WeirdGLSL,
+            0x01 => Texture1,
+            0x02 => Texture2,
+            0x11 => FolderMarker,
             _ => Unknown(input)
         }
     }
@@ -60,7 +72,11 @@ impl DDFiletype {
         match *self {
             WavAudio => "wav".to_string(),
             ShaderText => "shadercfg".to_string(),
-            Unknown(t) => format!("dd{:#X}", t)
+            WeirdGLSL => "dd_glsl".to_string(),
+            Texture1 => "dd_tex1".to_string(),
+            Texture2 => "dd_tex2".to_string(),
+            FolderMarker => "foldermarker".to_string(),
+            Unknown(t) => format!("dd_{:#X}", t)
         }
     }
 }
@@ -71,6 +87,10 @@ impl fmt::Display for DDFiletype {
         match *self {
             WavAudio => write!(f, "wav audio"),
             ShaderText => write!(f, "shader text file"),
+            WeirdGLSL => write!(f, "glsl shader"),
+            Texture1 => write!(f, "texture or something 1"),
+            Texture2 => write!(f, "texture or something 2"),
+            FolderMarker => write!(f, "folder marker probably"),
             Unknown(t) => write!(f, "unknown ({:#X})", t)
         }
     }
