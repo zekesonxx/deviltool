@@ -1,6 +1,10 @@
 
 use std::fmt;
-use nom::{le_u16, le_u32};
+use std::io::prelude::*;
+use std::io::BufReader;
+use nom::{IError, le_u16, le_u32};
+use nom::IResult::*;
+use nom::Needed::Size;
 
 #[derive(Debug, PartialEq)]
 pub struct DDMainHeader {
@@ -36,6 +40,8 @@ pub enum DDFiletype {
     ///
     /// audio/andrasimpact.wav: RIFF (little-endian) data, WAVE audio, Microsoft PCM, 16 bit, stereo 44100 Hz
     WavAudio,
+    /// 0x80, shader text file of some sort
+    ShaderText,
     Unknown(u16)
 }
 
@@ -44,7 +50,17 @@ impl DDFiletype {
         use DDFiletype::*;
         match input {
             0x20 => WavAudio,
+            0x80 => ShaderText,
             _ => Unknown(input)
+        }
+    }
+
+    pub fn extension(&self) -> String {
+        use DDFiletype::*;
+        match *self {
+            WavAudio => "wav".to_string(),
+            ShaderText => "shadercfg".to_string(),
+            Unknown(t) => format!("dd{:#X}", t)
         }
     }
 }
@@ -54,6 +70,7 @@ impl fmt::Display for DDFiletype {
         use DDFiletype::*;
         match *self {
             WavAudio => write!(f, "wav audio"),
+            ShaderText => write!(f, "shader text file"),
             Unknown(t) => write!(f, "unknown ({:#X})", t)
         }
     }
@@ -94,3 +111,19 @@ named!(pub header_section_bound<(DDMainHeader, Vec<DDSubFileHeader>)>,
         (main, files.0)
     )
 );
+
+pub fn read_header<R: Read>(reader: &mut R) -> Result<(DDMainHeader, Vec<DDSubFileHeader>), IError> {
+    let mut header: Vec<u8> = vec![0; 12];
+    reader.read_exact(&mut header[..12]);
+    match header_section_bound(header.as_ref()) {
+        Incomplete(Size(size)) => {
+            header.append(&mut vec![0; size]);
+            reader.read_exact(&mut header[12..size+12]);
+            header_section_bound(header.as_ref()).to_full_result()
+        },
+        _ => {
+            use nom::Needed::Unknown;
+            return Err(IError::Incomplete(Unknown));
+        }
+    }
+}
