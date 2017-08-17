@@ -8,10 +8,12 @@ use nom::Needed::Size;
 
 #[derive(Debug, PartialEq)]
 pub struct DDMainHeader {
-    /// The magic number at the start of the file
+    /// The magic number at the start of the file.
+    ///
     /// Should always be `:hx:rg:\01`
     pub magic_number: Vec<u8>, // should be [u8; 8]
-    /// Length of the header
+    /// Length of the header.
+    ///
     /// You only turn this into an offset if you add 12 to it, which the original C code was doing.
     pub header_length: u32
 }
@@ -31,7 +33,7 @@ pub struct DDSubFileHeader {
     pub timestamp: u32
 }
 
-// seems to be 0x20 for audio, and 0x10/0x11 and others for textures (dd), and 0x00 for the end of the header lump (for the first invalid fileheader)
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum DDFiletype {
     /// 0x20, little-endian WAVE audio, 44100 Hz 16 bit PCM
@@ -42,8 +44,8 @@ pub enum DDFiletype {
     WavAudio,
     /// 0x80, shader text file of some sort
     ShaderText,
-    /// 0x10, GLSL with some bytes at the beginning
-    WeirdGLSL,
+    /// 0x10, Combined GLSL vertex and fragment shader.
+    GLSL,
     /// 0x01, Some sort of texture data
     Texture1,
     /// 0x02, Some sort of texture data
@@ -59,7 +61,7 @@ impl DDFiletype {
         match input {
             0x20 => WavAudio,
             0x80 => ShaderText,
-            0x10 => WeirdGLSL,
+            0x10 => GLSL,
             0x01 => Texture1,
             0x02 => Texture2,
             0x11 => FolderMarker,
@@ -72,7 +74,7 @@ impl DDFiletype {
         match *self {
             WavAudio => "wav".to_string(),
             ShaderText => "shadercfg".to_string(),
-            WeirdGLSL => "dd_glsl".to_string(),
+            GLSL => "dd_glsl".to_string(),
             Texture1 => "dd_tex1".to_string(),
             Texture2 => "dd_tex2".to_string(),
             FolderMarker => "foldermarker".to_string(),
@@ -87,7 +89,7 @@ impl fmt::Display for DDFiletype {
         match *self {
             WavAudio => write!(f, "wav audio"),
             ShaderText => write!(f, "shader text file"),
-            WeirdGLSL => write!(f, "glsl shader"),
+            GLSL => write!(f, "glsl vert+frag shader"),
             Texture1 => write!(f, "texture or something 1"),
             Texture2 => write!(f, "texture or something 2"),
             FolderMarker => write!(f, "folder marker probably"),
@@ -131,6 +133,19 @@ named!(pub header_section_bound<(DDMainHeader, Vec<DDSubFileHeader>)>,
         (main, files.0)
     )
 );
+
+named!(pub glsl_file<(String, String, String)>,
+    do_parse!(
+        name_len: le_u32 >>
+        vert_len: le_u32 >>
+        frag_len: le_u32 >>
+        name: take_str!(name_len) >>
+        vert: take_str!(vert_len) >>
+        frag: take_str!(frag_len) >>
+        (name.to_string(), vert.to_string(), frag.to_string())
+    )
+);
+
 
 pub fn read_header<R: Read>(reader: &mut R) -> Result<(DDMainHeader, Vec<DDSubFileHeader>), IError> {
     let mut header: Vec<u8> = vec![0; 12];

@@ -50,6 +50,7 @@ fn main() {
             (@arg FOLDER: +required "Folder to extract to")
             (@arg modtimes: -m --nomodtimes "Don't export file modification times")
             (@arg nofolders: -f --nofolders "Don't automatically create subfolders for output")
+            (@arg preserveglsl: -g --preserveglsl "Don't split GLSL shaders into their respective files")
         )
     ).get_matches();
 
@@ -130,14 +131,42 @@ fn main() {
                         }
                         let mut output_file = output_dir.join(file.filename.clone());
                         output_file.set_extension(file.file_type.extension());
-                        println!("Writing {}", output_file.display());
+
                         {
-                            let mut file_handle = File::create(output_file.clone()).unwrap();
                             reader.seek(SeekFrom::Start(file.offset as u64));
                             let mut buf = vec![0; file.size as usize];
                             reader.read_exact(&mut buf[..]);
+
+                            if file.file_type == DDFiletype::GLSL && !matches.is_present("preserveglsl") {
+                                match parser::glsl_file(buf.as_ref()) {
+                                    Incomplete(_) | Error(_) => {
+                                        println!("Malformed GLSL file! Saving as normal file");
+                                    },
+                                    Done(_, (name, vertex, fragment)) => {
+                                        if name != file.filename {
+                                            println!("Warning: GLSL name is {} but saving as {}",
+                                                     name, file.filename);
+                                        }
+                                        output_file.set_extension("vert");
+                                        println!("Writing {}", output_file.display());
+                                        let mut file_handle = File::create(output_file.clone()).unwrap();
+                                        file_handle.write_all(vertex.as_bytes());
+
+                                        output_file.set_extension("frag");
+                                        println!("Writing {}", output_file.display());
+                                        let mut file_handle = File::create(output_file.clone()).unwrap();
+                                        file_handle.write_all(fragment.as_bytes());
+                                        continue;
+                                    }
+                                }
+                            }
+
+                            println!("Writing {}", output_file.display());
+                            let mut file_handle = File::create(output_file.clone()).unwrap();
                             file_handle.write_all(buf.as_mut());
+
                         }
+
                         if !matches.is_present("modtimes") && file.timestamp != 0 {
                             let metadata = std::fs::metadata(output_file.clone()).unwrap();
                             filetime::set_file_times(output_file.clone(),
