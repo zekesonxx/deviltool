@@ -2,17 +2,22 @@
 #[macro_use] extern crate clap;
 extern crate time;
 extern crate filetime;
+extern crate image;
 
 pub mod parser;
+pub mod tex2;
 use parser::*;
 
 use nom::IResult::*;
 use nom::Needed::Size;
 
+use image::{GenericImage,ImageBuffer};
+
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::io::SeekFrom;
 use std::fs::File;
+use std::path::PathBuf;
 
 fn main() {
     let file_exists = |path| {
@@ -23,6 +28,13 @@ fn main() {
         }
     };
     let file_still_exists = |path| {
+        if std::fs::metadata(path).is_ok() {
+            Ok(())
+        } else {
+            Err(String::from("File doesn't exist"))
+        }
+    };
+    let file_still_really_exists = |path| {
         if std::fs::metadata(path).is_ok() {
             Ok(())
         } else {
@@ -51,6 +63,11 @@ fn main() {
             (@arg modtimes: -m --nomodtimes "Don't export file modification times")
             (@arg nofolders: -f --nofolders "Don't automatically create subfolders for output")
             (@arg preserveglsl: -g --preserveglsl "Don't split GLSL shaders into their respective files")
+        )
+        (@subcommand imgconv =>
+            (about: "Convert images from dd_tex2")
+            (@setting ArgRequiredElseHelp)
+            (@arg FILE: +required {file_still_really_exists} "File to convert")
         )
     ).get_matches();
 
@@ -103,7 +120,7 @@ fn main() {
         },
         ("extract", Some(matches)) => {
             // make sure we have somewhere to put the files
-            let mut output_dir = std::path::PathBuf::from(matches.value_of("FOLDER").unwrap());
+            let mut output_dir = PathBuf::from(matches.value_of("FOLDER").unwrap());
             std::fs::create_dir_all(output_dir.clone());
 
             let f = File::open(matches.value_of("FILE").unwrap()).unwrap();
@@ -182,6 +199,40 @@ fn main() {
                 }
             }
         },
+        ("imgconv", Some(matches)) => {
+                let f = File::open(matches.value_of("FILE").unwrap()).unwrap();
+                let mut reader = BufReader::new(f);
+                let mut buf: Vec<u8> = Vec::with_capacity(5000);
+                reader.read_to_end(&mut buf);
+                match tex2::tex2_image(buf.as_ref()) {
+                    Done(_, ((height, width), pixels)) => {
+                        println!("parsed!");
+
+                        let mut img = ImageBuffer::new(width, height);
+                        let mut piter = pixels.iter();
+
+                        for (_, _, pixel) in img.enumerate_pixels_mut() {
+                            let real = piter.next().unwrap();
+                            *pixel = image::Rgba([real.0, real.1, real.2, real.3]);
+                        }
+
+                        let mut output_file = PathBuf::from(matches.value_of("FILE").unwrap());
+                        output_file.set_extension("png");
+
+                        let ref mut fout = File::create(output_file).unwrap();
+
+                        // We must indicate the image’s color type and what format to save as
+                        let _ = image::ImageRgba8(img).save(fout, image::PNG);
+                    },
+                    Error(err) => {
+                        println!("error: {:?}", err);
+                        println!("{}", err.description());
+                    },
+                    Incomplete(needed) => {
+                        println!("need {:?} more bytes", needed);
+                    }
+                }
+        }
         (_, _) => {}
     }
 }
