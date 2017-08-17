@@ -3,6 +3,7 @@
 extern crate time;
 extern crate filetime;
 extern crate image;
+extern crate byteorder;
 
 pub mod parser;
 pub mod tex2;
@@ -65,9 +66,11 @@ fn main() {
             (@arg preserveglsl: -g --preserveglsl "Don't split GLSL shaders into their respective files")
         )
         (@subcommand imgconv =>
-            (about: "Convert images from dd_tex2")
+            (about: "Convert images to/from dd_tex2")
             (@setting ArgRequiredElseHelp)
             (@arg FILE: +required {file_still_really_exists} "File to convert")
+            (@arg OUTFILE: "File to output to")
+            //(@arg reverse: -r --reverse "Convert to tex2. Yes this is awkward.")
         )
     ).get_matches();
 
@@ -205,16 +208,11 @@ fn main() {
                 let mut buf: Vec<u8> = Vec::with_capacity(5000);
                 reader.read_to_end(&mut buf);
                 match tex2::tex2_image(buf.as_ref()) {
-                    Done(_, ((height, width), pixels)) => {
+                    Done(unused, tex2image) => {
                         println!("parsed!");
 
-                        let mut img = ImageBuffer::new(width, height);
-                        let mut piter = pixels.iter();
-
-                        for (_, _, pixel) in img.enumerate_pixels_mut() {
-                            let real = piter.next().unwrap();
-                            *pixel = image::Rgba([real.0, real.1, real.2, real.3]);
-                        }
+                        let mut img = ImageBuffer::new(tex2image.width, tex2image.height);
+                        img.copy_from(&tex2image, 0, 0);
 
                         let mut output_file = PathBuf::from(matches.value_of("FILE").unwrap());
                         output_file.set_extension("png");
