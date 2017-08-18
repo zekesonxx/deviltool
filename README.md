@@ -42,3 +42,5 @@ A. You know, that's a really good question. Especially since I've spent <10 min 
 
 >     11:31:21 PM <LambdaComplex> "A. You know, that's a really good question. Especially since I've spent <10 min playing the game."
 >     11:31:25 PM <LambdaComplex> zekesonxx: I like the way you think
+
+For an answer to this question, look no further than [this video](https://files.zekesonxx.com/deviltoolvalidation.webm).
