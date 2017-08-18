@@ -9,9 +9,9 @@ use nom::Needed::Size;
 use types::*;
 
 
-named!(mainheader<DDMainHeader>,
+named!(pub mainheader<DDMainHeader>,
     do_parse!(
-        magic: take!(8) >>
+        magic: tag!(":hx:rg:\x01") >>
         offset: le_u32 >>
         (DDMainHeader {
             magic_number: Vec::from(magic),
@@ -45,31 +45,38 @@ named!(pub header_section_bound<(DDMainHeader, Vec<DDSubFileHeader>)>,
     )
 );
 
-named!(pub glsl_file<(String, String, String)>,
+named!(pub glsl_file_header<(String, u32, u32)>,
     do_parse!(
         name_len: le_u32 >>
         vert_len: le_u32 >>
         frag_len: le_u32 >>
         name: take_str!(name_len) >>
-        vert: take_str!(vert_len) >>
-        frag: take_str!(frag_len) >>
-        (name.to_string(), vert.to_string(), frag.to_string())
+        (name.to_string(), vert_len, frag_len)
+    )
+);
+
+named!(pub glsl_file<(String, String, String)>,
+    do_parse!(
+        header: glsl_file_header >>
+        vert: take_str!(header.1) >>
+        frag: take_str!(header.2) >>
+        (header.0, vert.to_string(), frag.to_string())
     )
 );
 
 
-pub fn read_header<R: Read>(reader: &mut R) -> Result<(DDMainHeader, Vec<DDSubFileHeader>), IError> {
+pub fn read_header<R: Read>(reader: &mut R) -> io::Result<Result<(DDMainHeader, Vec<DDSubFileHeader>), IError>> {
     let mut header: Vec<u8> = vec![0; 12];
-    reader.read_exact(&mut header[..12]);
+    reader.read_exact(&mut header[..12])?;
     match header_section_bound(header.as_ref()) {
         Incomplete(Size(size)) => {
             header.append(&mut vec![0; size]);
-            reader.read_exact(&mut header[12..size+12]);
-            header_section_bound(header.as_ref()).to_full_result()
+            reader.read_exact(&mut header[12..size+12])?;
+            Ok(header_section_bound(header.as_ref()).to_full_result())
         },
         _ => {
             use nom::Needed::Unknown;
-            return Err(IError::Incomplete(Unknown));
+            return Ok(Err(IError::Incomplete(Unknown)));
         }
     }
 }

@@ -6,13 +6,13 @@ use image::{ImageBuffer, GenericImage, Rgba};
 use nom::{IError, le_u8, le_u16, le_u32};
 use byteorder::{LittleEndian, WriteBytesExt};
 
-named!(pub tex2_header<(u32, u32)>,
+named!(pub tex2_header<(u32, u32, u8)>,
     do_parse!(
         tag!("\x11\x40") >> //.@, the magic number for the format
         height: le_u32 >>
         width: le_u32 >>
-        le_u8 >> // unknown
-        (height, width)
+        unknown: le_u8 >> // unknown
+        (height, width, unknown)
     )
 );
 

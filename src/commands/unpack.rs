@@ -21,10 +21,8 @@ pub fn execute(matches: &ArgMatches) {
     let f = File::open(matches.value_of("FILE").unwrap()).unwrap();
     let mut reader = BufReader::new(f);
     let mut firstfolder = true;
-    match parser::read_header(&mut reader) {
-        Ok(data) => {
-            let header: DDMainHeader = data.0;
-            let mut files: Vec<DDSubFileHeader> = data.1;
+    match parser::read_header(&mut reader).unwrap() {
+        Ok((header, mut files)) => {
             if !matches.is_present("nofolders") { files.reverse(); }
             for file in files {
                 if file.file_type == DDFiletype::FolderMarker {
