@@ -4,6 +4,7 @@ extern crate time;
 extern crate filetime;
 extern crate image;
 extern crate byteorder;
+extern crate bytesize;
 
 pub mod parser;
 pub mod tex2;
@@ -42,9 +43,10 @@ fn main() {
             (about: "Prints file list from an archive")
             (@setting ArgRequiredElseHelp)
             (@arg FILE: +required {file_exists} "File to print information about")
-            (@arg types: -t --types "Print file types")
-            (@arg extensions: -e --ext "Include guessed file extensions")
-            (@arg verbose: -v --verbose "Print all information")
+            (@arg list: -l --list "List files in an archive")
+            (@arg offset: -o --offset "Include file offsets")
+            (@arg extensions: -e --extensions "Include file extensions")
+            (@arg dump: -d --dump "Print file list as a machine-friendly dump of information")
         )
         (@subcommand unpack =>
             (about: "Extract files from an archive to a folder")

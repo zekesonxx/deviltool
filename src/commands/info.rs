@@ -5,6 +5,7 @@ use time::strptime;
 use std::io::{self, BufReader, Read, Seek, SeekFrom};
 use std::fs::File;
 use nom::IResult;
+use bytesize::ByteSize;
 
 use super::super::types::*;
 use super::super::parser;
@@ -78,44 +79,47 @@ fn guess_format<R: Read + Seek>(mut reader: &mut R) -> io::Result<GuessedFormat>
 }
 
 fn archive_info<R: Read>(matches: &ArgMatches, mut reader: &mut R) -> io::Result<()> {
-    match parser::read_header(&mut reader)? {
-        Ok((header, files)) => {
-            if matches.is_present("verbose") {
-                println!("## HEADER");
-                println!("magic bytes: {:?}", header.magic_number);
-                println!("header length: {}", header.header_length);
-                println!("## FILES");
-            } else {
-                println!("{} file{}", files.len(), if files.len() == 1 {""} else {"s"});
-            }
+    if let Ok((header, files)) = parser::read_header(&mut reader)? {
+        let totalsize = files.iter().fold(0, |acc, ref x| acc + x.size) as usize;
+        println!("{filename}: dd archive, {header} byte header, {count} file{countplural}, totaling {total}",
+                 filename=matches.value_of("FILE").unwrap(),
+                 count=files.len(),
+                 countplural=if files.len() == 1 {""} else {"s"},
+                 header=header.header_length + 12,
+                 total=ByteSize::b(totalsize).to_string(true)
+        );
 
+        if matches.is_present("list") || matches.is_present("dump") {
             for file in files {
-                if matches.is_present("verbose") {
-                    println!("offset {} B\tdatetime {}\t{} B\t{}\t{:?}",
-                             file.offset,
-                             strptime(format!("{}", file.timestamp).as_mut_str(), "%s").unwrap().rfc3339(),
-                             file.size,
-                             file.filename,
-                             file.file_type
-                    );
-                } else if matches.is_present("types") {
-                    println!("{}{}: {} MB, {}",
-                             file.filename,
-                             if matches.is_present("extensions") {file.file_type.extension()} else {"".to_string()},
-                             (file.size as f32)/1024f32/1024f32,
-                             file.file_type
+                if matches.is_present("dump") {
+                    println!("offset {offset:9} | datetime {datetime} | size {size:9} | {ftype:>11} | {name}",
+                             offset=file.offset,
+                             datetime=strptime(format!("{}", file.timestamp).as_mut_str(), "%s").unwrap().rfc3339(),
+                             size=file.size,
+                             name=file.filename,
+                             ftype=format!("{:?}", file.file_type)
                     );
                 } else {
-                    println!("{}: {} MB",
-                             file.filename,
-                             (file.size as f32)/1024f32/1024f32,
+                    println!("- {filename}{ext}: {ftype}, {size}{offset}",
+                             filename = file.filename,
+                             size = ByteSize::b(file.size as usize),
+                             ftype = file.file_type,
+                             offset = if matches.is_present("offset") {
+                                 format!(", offset {}", file.offset)
+                             } else {
+                                 "".to_string()
+                             },
+                             ext = if matches.is_present("extensions") {
+                                 format!(".{}", file.file_type.extension())
+                             } else {
+                                 "".to_string()
+                             }
                     );
                 }
             }
-        },
-        Err(err) => {
-            println!("Error! {:?}", err);
         }
+    } else {
+        println!("A very strange error occurred");
     }
     Ok(())
 }
