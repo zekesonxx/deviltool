@@ -19,7 +19,7 @@ pub fn execute(matches: &ArgMatches) {
             let totalpixels = (tex2image.width*tex2image.height) as usize;
             let extrapixels= tex2image.pixels.len() - totalpixels;
             print!("{}: ", matches.value_of("FILE").unwrap());
-            print!("{height}x{width} ({totalpixels}), unknown {unknown:#X}, extra pixels: {extra}",
+            print!("{width}x{height} ({totalpixels}), unknown {unknown:#X}, extra pixels: {extra}",
                      height=tex2image.height,
                      width=tex2image.width,
                      totalpixels=totalpixels,
@@ -27,7 +27,21 @@ pub fn execute(matches: &ArgMatches) {
                      extra=extrapixels
             );
             println!(", unused: {}", unused.len());
+            let widthexp = (tex2image.width as f32).log(2f32) as u32;
+            let heightexp = (tex2image.height as f32).log(2f32) as u32;
 
+            let mut remainder = extrapixels;
+            for i in 1..(tex2image.unknown1) {
+                let width = 2u32.pow(widthexp - i as u32);
+                let height = 2u32.pow(heightexp - i as u32);
+                remainder -= (width*height) as usize;
+                println!("- {}x{}: {} pixels, remaining: {}",
+                    width,
+                    height,
+                    width*height,
+                    remainder
+                );
+            }
         },
         Error(err) => {
             println!("error: {:?}", err);
