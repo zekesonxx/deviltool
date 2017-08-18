@@ -72,6 +72,11 @@ fn main() {
             (@arg DIR: +required "Directory to get files from")
             (@arg zerotime: -z --nomodtimes "Don't archive file modification times (put in zeros instead)")
         )
+        (@subcommand imginspect =>
+            (about: "Hacky thing")
+            (@setting ArgRequiredElseHelp)
+            (@arg FILE: +required "File to convert")
+        )
     ).get_matches();
 
     match matches.subcommand() {
@@ -79,6 +84,7 @@ fn main() {
         ("unpack", Some(matches)) => commands::unpack::execute(matches),
         ("imgconv", Some(matches)) => commands::imgconv::execute(matches),
         ("pack", Some(matches)) => commands::pack::execute(matches),
+        ("imginspect", Some(matches)) => commands::imginspect::execute(matches),
         (_, _) => {}
     }
 }

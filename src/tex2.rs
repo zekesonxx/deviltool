@@ -30,23 +30,38 @@ named!(pub tex2_image<DDTex2Image>,
         header: tex2_header >>
         pixels: count!(tex2_pixel, (header.0*header.1) as usize) >>
         (DDTex2Image {
+            unknown1: header.2,
             height: header.0,
             width: header.1,
             pixels: pixels
         })
     )
+);
 
+named!(pub tex2_image_boundless<DDTex2Image>,
+    do_parse!(
+        header: tex2_header >>
+        pixels: many1!(tex2_pixel) >>
+        (DDTex2Image {
+            unknown1: header.2,
+            height: header.0,
+            width: header.1,
+            pixels: pixels
+        })
+    )
 );
 
 pub struct DDTex2Image {
+    pub unknown1: u8,
     pub height: u32,
     pub width: u32,
-    pixels: Vec<(u8, u8, u8, u8)>
+    pub pixels: Vec<(u8, u8, u8, u8)>
 }
 
 impl DDTex2Image {
     pub fn new(width: u32, height: u32) -> Self {
         DDTex2Image {
+            unknown1: 0x08,
             height: height,
             width: width,
             pixels: vec![(0, 0, 0, 0); (height*width) as usize]
@@ -58,7 +73,7 @@ impl DDTex2Image {
         dst.write_u8(0x40)?;
         dst.write_u32::<LittleEndian>(self.height)?;
         dst.write_u32::<LittleEndian>(self.width)?;
-        dst.write_u8(0x08)?; //no idea what this is
+        dst.write_u8(self.unknown1)?; //no idea what this is
         for pixel in self.pixels.iter() {
             dst.write_u8(pixel.0)?;
             dst.write_u8(pixel.1)?;
