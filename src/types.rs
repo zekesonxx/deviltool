@@ -115,6 +115,14 @@ impl DDFiletype {
             _ => None
         }
     }
+    pub fn is_unknown(&self) -> bool {
+        use self::DDFiletype::*;
+        if let &Unknown(_) = self {
+            true
+        } else {
+            false
+        }
+    }
 }
 
 impl fmt::Display for DDFiletype {
