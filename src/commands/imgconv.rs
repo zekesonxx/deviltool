@@ -15,11 +15,14 @@ pub fn execute(matches: &ArgMatches) {
     let mut reader = BufReader::new(f);
     let mut buf: Vec<u8> = Vec::with_capacity(5000);
     reader.read_to_end(&mut buf);
-    match tex2::tex2_image(buf.as_ref()) {
-        Done(unused, tex2image) => {
+    match tex2::tex2_image_boundless(buf.as_ref()) {
+        Done(unused, mut tex2image) => {
             println!("parsed!");
 
             let mut img = ImageBuffer::new(tex2image.width, tex2image.height);
+            if matches.is_present("phantom") {
+                tex2image.phantom = true;
+            }
             img.copy_from(&tex2image, 0, 0);
 
             let mut output_file = PathBuf::from(matches.value_of("FILE").unwrap());

@@ -33,7 +33,8 @@ named!(pub tex2_image<DDTex2Image>,
             unknown1: header.2,
             height: header.0,
             width: header.1,
-            pixels: pixels
+            pixels: pixels,
+            phantom: false
         })
     )
 );
@@ -46,7 +47,8 @@ named!(pub tex2_image_boundless<DDTex2Image>,
             unknown1: header.2,
             height: header.0,
             width: header.1,
-            pixels: pixels
+            pixels: pixels,
+            phantom: false
         })
     )
 );
@@ -55,7 +57,8 @@ pub struct DDTex2Image {
     pub unknown1: u8,
     pub height: u32,
     pub width: u32,
-    pub pixels: Vec<(u8, u8, u8, u8)>
+    pub pixels: Vec<(u8, u8, u8, u8)>,
+    pub phantom: bool
 }
 
 impl DDTex2Image {
@@ -64,7 +67,8 @@ impl DDTex2Image {
             unknown1: 0x08,
             height: height,
             width: width,
-            pixels: vec![(0, 0, 0, 0); (height*width) as usize]
+            pixels: vec![(0, 0, 0, 0); (height*width) as usize],
+            phantom: false
         }
     }
 
@@ -82,6 +86,20 @@ impl DDTex2Image {
         }
         Ok(())
     }
+
+    pub fn pos(&self, x: u32, y: u32) -> usize {
+        if self.phantom {
+            ((self.width*self.height) + (self.width*y) + x) as usize
+        } else {
+            ((self.width*y) + x) as usize
+        }
+    }
+    pub fn pixel(&self, x: u32, y: u32) -> (u8, u8, u8, u8) {
+        match self.pixels.get(self.pos(x, y)) {
+            Some(p) => *p,
+            None => (0xFF, 0xFF, 0xFF, 0xFF)
+        }
+    }
 }
 
 impl GenericImage for DDTex2Image {
@@ -96,7 +114,7 @@ impl GenericImage for DDTex2Image {
     }
 
     fn get_pixel(&self, x: u32, y: u32) -> Self::Pixel {
-        let p = self.pixels[((self.width*y) + x) as usize];
+        let p = self.pixel(x, y);
         image::Rgba([p.0, p.1, p.2, p.3])
     }
 
@@ -105,7 +123,8 @@ impl GenericImage for DDTex2Image {
     }
 
     fn put_pixel(&mut self, x: u32, y: u32, pixel: Self::Pixel) {
-        self.pixels[((self.width*y) + x) as usize] = (pixel[0], pixel[1], pixel[2], pixel[3])
+        let pos = self.pos(x, y);
+        self.pixels[pos] = (pixel[0], pixel[1], pixel[2], pixel[3])
     }
 
     fn blend_pixel(&mut self, x: u32, y: u32, pixel: Self::Pixel) {
