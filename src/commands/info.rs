@@ -5,7 +5,8 @@ use time::strptime;
 use std::io::BufReader;
 use std::fs::File;
 
-use super::super::parser::{self, DDMainHeader, DDSubFileHeader};
+use super::super::types::*;
+use super::super::parser;
 
 pub fn execute(matches: &ArgMatches) {
     let f = File::open(matches.value_of("FILE").unwrap()).unwrap();

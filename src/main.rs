@@ -7,8 +7,8 @@ extern crate byteorder;
 
 pub mod parser;
 pub mod tex2;
+pub mod types;
 mod commands;
-use parser::*;
 
 fn main() {
     let file_exists = |path| {

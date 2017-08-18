@@ -8,7 +8,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use byteorder::{LittleEndian, WriteBytesExt};
 
-use super::super::parser::{self, DDMainHeader, DDSubFileHeader, DDFiletype};
+use super::super::types::{self, DDMainHeader, DDSubFileHeader, DDFiletype};
 
 pub fn execute(matches: &ArgMatches) {
     let folder = PathBuf::from(matches.value_of("DIR").unwrap());

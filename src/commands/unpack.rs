@@ -10,7 +10,8 @@ use nom::IResult::*;
 use nom::Needed::Size;
 use filetime::{self, FileTime};
 
-use super::super::parser::{self, DDMainHeader, DDSubFileHeader, DDFiletype};
+use super::super::types::*;
+use super::super::parser;
 
 pub fn execute(matches: &ArgMatches) {
     // make sure we have somewhere to put the files
