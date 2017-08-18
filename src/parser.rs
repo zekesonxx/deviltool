@@ -1,7 +1,8 @@
 
 use std::fmt;
 use std::io::prelude::*;
-use std::io::BufReader;
+use std::io::{self, Write, BufReader};
+use byteorder::{LittleEndian, WriteBytesExt};
 use nom::{IError, le_u16, le_u32};
 use nom::IResult::*;
 use nom::Needed::Size;
@@ -31,6 +32,18 @@ pub struct DDSubFileHeader {
     /// Unix timestamp.
     /// File creation/modification times?
     pub timestamp: u32
+}
+
+impl DDSubFileHeader {
+    pub fn write(&self, mut dst: &mut Write) -> io::Result<()> {
+        dst.write_u16::<LittleEndian>(self.file_type.to_u16())?;
+        dst.write(self.filename.as_bytes())?;
+        dst.write_u8(0)?; // Null term for filename
+        dst.write_u32::<LittleEndian>(self.offset)?;
+        dst.write_u32::<LittleEndian>(self.size)?;
+        dst.write_u32::<LittleEndian>(self.timestamp)?;
+        Ok(())
+    }
 }
 
 
@@ -68,6 +81,18 @@ impl DDFiletype {
             _ => Unknown(input)
         }
     }
+    pub fn to_u16(&self) -> u16 {
+        use DDFiletype::*;
+        match *self {
+            WavAudio => 0x20,
+            ShaderText => 0x80,
+            GLSL => 0x10,
+            Texture1 => 0x01,
+            Texture2 => 0x02,
+            FolderMarker => 0x11,
+            Unknown(t) => t
+        }
+    }
 
     pub fn extension(&self) -> String {
         use DDFiletype::*;
@@ -79,6 +104,17 @@ impl DDFiletype {
             Texture2 => "dd_tex2".to_string(),
             FolderMarker => "foldermarker".to_string(),
             Unknown(t) => format!("dd_{:#X}", t)
+        }
+    }
+    pub fn from_extension(ext: &str) -> Option<Self> {
+        use DDFiletype::*;
+        match ext {
+            "wav" => Some(WavAudio),
+            "dd_glsl" => Some(GLSL),
+            "dd_tex1" => Some(Texture1),
+            "dd_tex2" => Some(Texture2),
+            "shadercfg" => Some(ShaderText),
+            _ => None
         }
     }
 }

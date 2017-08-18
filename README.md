@@ -16,8 +16,8 @@ deviltool is an extensive toolset for working with files from the game [Devil Da
     * [x] Decode dd_tex2 (magic number 0x11 0x40) files into pngs
     * [ ] Figure out how the folders really work
     * [ ] Figure out what dd_tex1 is
-* [ ] Packing
-    * [ ] Basic packing
+* [x] Packing
+    * [x] Basic packing
     * [ ] Repack the two glsl shaders into one file
     * [ ] Repack bmp into dd_tex2 or something
     * [ ] Folders?
