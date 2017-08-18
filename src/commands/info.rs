@@ -144,14 +144,26 @@ fn glsl_info<R: Read>(matches: &ArgMatches, mut reader: &mut R) -> io::Result<()
     let mut buf = vec![];
     reader.read_to_end(&mut buf)?;
     if let IResult::Done(_, info) = parser::glsl_file(&buf) {
-        println!("{}: glsl vert+frag shader \"{}\"\nvertex shader: {} lines ({} bytes)\nfragment shader: {} lines ({} bytes)",
+        println!("{}: glsl vert+frag shader \"{}\"",
                  matches.value_of("FILE").unwrap(),
-                 info.0,
-                 info.1.lines().count(),
-                 info.1.len(),
-                 info.2.lines().count(),
-                 info.2.len()
+                 info.0
         );
+        println!("vertex shader: {} lines ({} bytes)",
+                 info.1.lines().count(),
+                 info.1.len()
+        );
+        if matches.is_present("dump") {
+            println!("{}", info.1);
+            println!();
+            println!();
+        }
+        println!("fragment shader: {} lines ({} bytes)",
+                 info.2.lines().count(),
+                 info.1.len()
+        );
+        if matches.is_present("dump") {
+            println!("{}", info.2);
+        }
     } else {
         println!("A very strange error occurred");
     }

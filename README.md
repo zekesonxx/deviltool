@@ -21,6 +21,11 @@ deviltool is an extensive toolset for working with files from the game [Devil Da
     * [ ] Repack the two glsl shaders into one file
     * [ ] Repack bmp into dd_tex2 or something
     * [ ] Folders?
+* [ ] Info
+    * [x] Archive info + list
+    * [ ] Archive file summary
+    * [x] GLSL info + dump source
+    * [x] Tex2 info
 
 ## Explanationy
 The original work on this was done in [McKay42/devil-daggers-extractor](https://github.com/McKay42/devil-daggers-extractor). However, it had a number of problems:

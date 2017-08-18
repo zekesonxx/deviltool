@@ -46,7 +46,7 @@ fn main() {
             (@arg list: -l --list "List files in an archive")
             (@arg offset: -o --offset "Include file offsets")
             (@arg extensions: -e --extensions "Include file extensions")
-            (@arg dump: -d --dump "Print file list as a machine-friendly dump of information")
+            (@arg dump: -d --dump "With an archive: print files in table\nWith a GLSL file: dump GLSL source")
         )
         (@subcommand unpack =>
             (about: "Extract files from an archive to a folder")
