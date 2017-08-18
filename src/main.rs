@@ -70,6 +70,7 @@ fn main() {
             (@setting ArgRequiredElseHelp)
             (@arg ARCHIVE: +required "Archive to output to")
             (@arg DIR: +required "Directory to get files from")
+            (@arg zerotime: -z --nomodtimes "Don't archive file modification times (put in zeros instead)")
         )
     ).get_matches();
 

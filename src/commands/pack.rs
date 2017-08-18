@@ -63,7 +63,11 @@ pub fn execute(matches: &ArgMatches) {
         }
 
         // Determine Timestamp
-        let mtime = FileTime::from_last_modification_time(&file.metadata().unwrap()).seconds_relative_to_1970() as u32;
+        let mtime = if matches.is_present("zerotime") {
+            0u32
+        } else {
+            FileTime::from_last_modification_time(&file.metadata().unwrap()).seconds_relative_to_1970() as u32
+        };
 
         //TODO remove this because it's dumb
         if filesize as usize > biggest_file_size {
@@ -92,6 +96,13 @@ pub fn execute(matches: &ArgMatches) {
 
     }
     println!("## Built list of {} file{}", files.len(), if files.len() == 1 {""} else {"s"});
+
+    // Sort file list alphabetically
+    // This makes packing deterministic.
+    // (no relying on the semi-random order the FS gives them to us)
+    files.sort_by(|a, b| a.1.filename.cmp(&b.1.filename));
+    println!("Sorted file list.");
+
     println!("Total subheader length: {}B", total_subheader_length);
     let files_start_at: u32 = total_subheader_length + 12;
     println!("First file offset at: {}", files_start_at);
