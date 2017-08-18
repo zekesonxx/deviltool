@@ -26,6 +26,7 @@ deviltool is an extensive toolset for working with files from the game [Devil Da
     * [ ] Archive file summary
     * [x] GLSL info + dump source
     * [x] Tex2 info
+    * [x] OpenAL MHR file info
 
 ## Explanationy
 The original work on this was done in [McKay42/devil-daggers-extractor](https://github.com/McKay42/devil-daggers-extractor). However, it had a number of problems:

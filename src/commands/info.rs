@@ -16,6 +16,7 @@ enum GuessedFormat {
     DDArchive,
     Texture2,
     GLSLShader,
+    HRTF,
     Unknown
 }
 
@@ -42,6 +43,12 @@ pub fn execute(matches: &ArgMatches) {
         },
         GLSLShader => {
             glsl_info(matches, &mut reader);
+        },
+        HRTF => {
+            println!("{}: HRTF/mhr file (generic OpenAL asset)", matches.value_of("FILE").unwrap());
+            println!("See the following links for more info:");
+            println!("- https://github.com/kcat/openal-soft/blob/master/utils/makehrtf.c");
+            println!("- https://github.com/kcat/openal-soft/tree/master/hrtf");
         },
         _ => {
             println!("{}: unknown", matches.value_of("FILE").unwrap());
@@ -72,6 +79,12 @@ fn guess_format<R: Read + Seek>(mut reader: &mut R) -> io::Result<GuessedFormat>
     // GLSL shader file?
     if let IResult::Done(_, _) = parser::glsl_file_header(&buf) {
         return Ok(GLSLShader);
+    }
+
+    // OpenAL default-44100.mhr and default-48000.mhr files
+    // in the root of the game dir
+    if buf.starts_with(b"MinPHR01") {
+        return Ok(HRTF);
     }
 
 
