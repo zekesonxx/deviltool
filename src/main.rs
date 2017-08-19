@@ -63,7 +63,7 @@ fn main() {
             (@setting ArgRequiredElseHelp)
             (@arg FILE: +required {file_still_really_exists} "File to convert")
             (@arg OUTFILE: "File to output to")
-            (@arg phantom: -p --phantom "Convert the phantom afterimage instead.")
+            (@arg mipmaps: -m --mipmaps "Export mipmaps as well as the full-resolution image")
             //(@arg reverse: -r --reverse "Convert to tex2. Yes this is awkward.")
         )
         (@subcommand pack =>

@@ -55,7 +55,7 @@ named!(pub tex2_image_boundless<DDTex2Image>,
 
 pub struct DDTex2Image {
     pub mipmap_levels: u8,
-    pub mipmap_current: u8,
+    mipmap_current: u8,
     pub height: u32,
     pub width: u32,
     pub pixels: Vec<(u8, u8, u8, u8)>
@@ -85,6 +85,13 @@ impl DDTex2Image {
             dst.write_u8(pixel.3)?;
         }
         Ok(())
+    }
+
+    pub fn set_mipmap(&mut self, new: u8) {
+        if new != 0 && (!self.height.is_power_of_two() || !self.width.is_power_of_two()) {
+            panic!("DDTex2Image {}x{}: can't do mipmap levels on non-power-of-two!", self.width, self.height);
+        }
+        self.mipmap_current = new;
     }
 
     pub fn cur_width(&self) -> u32 {
