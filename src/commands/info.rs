@@ -141,11 +141,12 @@ fn texture_info<R: Read>(matches: &ArgMatches, mut reader: &mut R) -> io::Result
     let mut buf = vec![0u8; 11];
     reader.read_exact(&mut buf[..])?;
     if let IResult::Done(_, info) = tex2::tex2_header(&buf) {
-        println!("{}: texture2, {}x{}, unknown byte {:#X}",
-            matches.value_of("FILE").unwrap(),
-            info.0,
-            info.1,
-            info.2
+        println!("{}: texture2, {}x{}, {} mipmap level{}",
+                 matches.value_of("FILE").unwrap(),
+                 info.0,
+                 info.1,
+                 info.2,
+                 if info.2 == 1 {""} else {"s"}
         );
     } else {
         println!("A very strange error occurred");

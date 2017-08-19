@@ -23,7 +23,7 @@ pub fn execute(matches: &ArgMatches) {
                      height=tex2image.height,
                      width=tex2image.width,
                      totalpixels=totalpixels,
-                     unknown=tex2image.unknown1,
+                     unknown=tex2image.mipmap_levels,
                      extra=extrapixels
             );
             println!(", unused: {}", unused.len());
@@ -31,7 +31,7 @@ pub fn execute(matches: &ArgMatches) {
             let heightexp = (tex2image.height as f32).log(2f32) as u32;
 
             let mut remainder = extrapixels;
-            for i in 1..(tex2image.unknown1) {
+            for i in 1..(tex2image.mipmap_levels) {
                 let width = 2u32.pow(widthexp - i as u32);
                 let height = 2u32.pow(heightexp - i as u32);
                 remainder -= (width*height) as usize;
