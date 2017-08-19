@@ -31,10 +31,10 @@ named!(pub tex2_image<DDTex2Image>,
         pixels: count!(tex2_pixel, (header.0*header.1) as usize) >>
         (DDTex2Image {
             mipmap_levels: header.2,
+            mipmap_current: 0,
             height: header.0,
             width: header.1,
-            pixels: pixels,
-            phantom: false
+            pixels: pixels
         })
     )
 );
@@ -45,30 +45,30 @@ named!(pub tex2_image_boundless<DDTex2Image>,
         pixels: many1!(tex2_pixel) >>
         (DDTex2Image {
             mipmap_levels: header.2,
+            mipmap_current: 0,
             height: header.0,
             width: header.1,
-            pixels: pixels,
-            phantom: false
+            pixels: pixels
         })
     )
 );
 
 pub struct DDTex2Image {
     pub mipmap_levels: u8,
+    pub mipmap_current: u8,
     pub height: u32,
     pub width: u32,
-    pub pixels: Vec<(u8, u8, u8, u8)>,
-    pub phantom: bool
+    pub pixels: Vec<(u8, u8, u8, u8)>
 }
 
 impl DDTex2Image {
     pub fn new(width: u32, height: u32) -> Self {
         DDTex2Image {
-            mipmap_levels: 0x08,
+            mipmap_levels: 0,
+            mipmap_current: 0,
             height: height,
             width: width,
-            pixels: vec![(0, 0, 0, 0); (height*width) as usize],
-            phantom: false
+            pixels: vec![(0, 0, 0, 0); (height*width) as usize]
         }
     }
 
@@ -87,12 +87,17 @@ impl DDTex2Image {
         Ok(())
     }
 
+    pub fn cur_width(&self) -> u32 {
+        self.width >> self.mipmap_current
+    }
+
+    pub fn cur_height(&self) -> u32 {
+        self.height >> self.mipmap_current
+    }
+
     pub fn pos(&self, x: u32, y: u32) -> usize {
-        if self.phantom {
-            ((self.width*self.height) + (self.width*y) + x) as usize
-        } else {
-            ((self.width*y) + x) as usize
-        }
+        (calc_offset(self.height, self.width, (self.mipmap_current) as u32)
+            + ((self.cur_width()*y) + x)) as usize
     }
     pub fn pixel(&self, x: u32, y: u32) -> (u8, u8, u8, u8) {
         match self.pixels.get(self.pos(x, y)) {
@@ -106,11 +111,11 @@ impl GenericImage for DDTex2Image {
     type Pixel = image::Rgba<u8>;
 
     fn dimensions(&self) -> (u32, u32) {
-        (self.width, self.height)
+        (self.cur_width(), self.cur_height())
     }
 
     fn bounds(&self) -> (u32, u32, u32, u32) {
-        (0, 0, self.width, self.height)
+        (0, 0, self.cur_width(), self.cur_height())
     }
 
     fn get_pixel(&self, x: u32, y: u32) -> Self::Pixel {
@@ -124,10 +129,26 @@ impl GenericImage for DDTex2Image {
 
     fn put_pixel(&mut self, x: u32, y: u32, pixel: Self::Pixel) {
         let pos = self.pos(x, y);
-        self.pixels[pos] = (pixel[0], pixel[1], pixel[2], pixel[3])
+        self.pixels[pos] = (pixel[0], pixel[1], pixel[2], pixel[3]);
     }
 
     fn blend_pixel(&mut self, x: u32, y: u32, pixel: Self::Pixel) {
         unimplemented!()
     }
+}
+
+
+//12:36:48 AM <ubsan> zekesonxx: lemme think about it
+//12:36:51 AM <ubsan> I have an idea
+//12:37:24 AM <zekesonxx> ubsan: shoot
+//12:37:42 AM <ubsan> zekesonxx: alright, so the function definition would be something like
+//12:37:57 AM <ubsan> fn foo(x: usize, y: usize, n: u32) -> usize {
+//12:39:51 AM <ubsan>   let (x, y) = (x.trailing_zeroes(), y.trailing_zeroes()); (0..n).fold(1, |acc, n| acc += 1 << (x - n) * 1 << (y - n))
+//12:39:55 AM <ubsan> something like this ^?
+//12:52:55 AM <zekesonxx> ubsan: little bit of reworking needed but looks good. Thanks for the help.
+//12:53:01 AM <ubsan> zekesonxx: yep!
+//12:53:10 AM * ubsan has done some assembly in the past :P
+fn calc_offset(height: u32, width: u32, cur_mip: u32) -> u32 {
+    let (x, y) = (height.trailing_zeros(), width.trailing_zeros());
+    (0..cur_mip).fold(0u32, |acc, n| acc + (1 << (x - n) * 1 << (y - n)))
 }
