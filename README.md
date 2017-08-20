@@ -13,20 +13,36 @@ deviltool is an extensive toolset for working with files from the game [Devil Da
     * [x] Add extensions automatically when extracting
     * [x] Folder marker things
     * [x] Split GLSL files into their respective vert and frag files
-    * [x] Decode dd_tex2 (magic number 0x11 0x40) files into pngs
-    * [ ] Figure out how the folders really work
-    * [ ] Figure out what dd_tex1 is
-* [x] Packing
+    * [ ] Option to auto-convert tex to png/etc.
+    * [ ] Remove the whole folder marker system since it doesn't work and is annoying.
+    * [x] ~~Figure out how the folders really work~~: they don't.
+    * [x] ~~Figure out what dd_tex1 is~~: probably model data.
+    * [ ] Shorter output option, `\r` and whatnot.
+* [ ] Packing
     * [x] Basic packing
     * [ ] Repack the two glsl shaders into one file
     * [ ] Repack bmp into dd_tex2 or something
-    * [ ] Folders?
+    * [x] ~~Folders?~~ can't convert what doesn't work
+    * [ ] Shorter output option, `\r` and whatnot.
+* [ ] File Conversion
+    * [x] Convert tex2 to png
+    * [ ] Convert png to tex2
+        * [ ] without mipmaps
+        * [ ] with mipmaps
+    * [ ] Add support for [the other formats image supports](https://github.com/PistonDevelopers/image#21-supported-image-formats).
+    * [ ] Split GLSL files
+    * [ ] Combine GLSL files
 * [ ] Info
     * [x] Archive info + list
     * [ ] Archive file summary
     * [x] GLSL info + dump source
     * [x] Tex2 info
+    * [ ] Output the two u32s from tex1 I suppose
     * [x] OpenAL MHR file info
+* [ ] Future ideas:
+    * [ ] Extract individual files
+    * [ ] In-place file replacement (copy to a `.orig` perhaps?)
+    * [ ] wtf is tex1
 
 ## Explanationy
 The original work on this was done in [McKay42/devil-daggers-extractor](https://github.com/McKay42/devil-daggers-extractor). However, it had a number of problems:
