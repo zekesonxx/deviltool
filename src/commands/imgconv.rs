@@ -59,7 +59,7 @@ pub fn read_tex2<P: AsRef<Path>>(file: P) -> io::Result<tex2::DDTex2Image> {
     let mut reader = BufReader::new(f);
     let mut buf: Vec<u8> = Vec::with_capacity(5000);
     reader.read_to_end(&mut buf)?;
-    match tex2::tex2_image_boundless(buf.as_ref()) {
+    match tex2::tex2_image(buf.as_ref()) {
         Done(_, tex2image) => {
             return Ok(tex2image);
         },

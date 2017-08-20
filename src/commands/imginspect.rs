@@ -14,7 +14,7 @@ pub fn execute(matches: &ArgMatches) {
     let mut reader = BufReader::new(f);
     let mut buf: Vec<u8> = Vec::with_capacity(5000);
     reader.read_to_end(&mut buf);
-    match tex2::tex2_image_boundless(buf.as_ref()) {
+    match tex2::tex2_image(buf.as_ref()) {
         Done(unused, tex2image) => {
             let totalpixels = (tex2image.width*tex2image.height) as usize;
             let extrapixels= tex2image.pixels.len() - totalpixels;

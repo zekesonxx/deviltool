@@ -28,21 +28,7 @@ named!(pub tex2_pixel<(u8, u8, u8, u8)>,
 named!(pub tex2_image<DDTex2Image>,
     do_parse!(
         header: tex2_header >>
-        pixels: count!(tex2_pixel, (header.0*header.1) as usize) >>
-        (DDTex2Image {
-            mipmap_levels: header.2,
-            mipmap_current: 0,
-            height: header.0,
-            width: header.1,
-            pixels: pixels
-        })
-    )
-);
-
-named!(pub tex2_image_boundless<DDTex2Image>,
-    do_parse!(
-        header: tex2_header >>
-        pixels: many1!(tex2_pixel) >>
+        pixels: count!(tex2_pixel, calc_offset(header.0, header.1, (header.2 as u32)+1) as usize) >>
         (DDTex2Image {
             mipmap_levels: header.2,
             mipmap_current: 0,
