@@ -2,8 +2,8 @@
 use std::io::{self, Write};
 
 use image;
-use image::{ImageBuffer, GenericImage, Rgba};
-use nom::{IError, le_u8, le_u16, le_u32};
+use image::GenericImage;
+use nom::{le_u8, le_u32};
 use byteorder::{LittleEndian, WriteBytesExt};
 
 named!(pub tex2_header<(u32, u32, u8)>,
@@ -100,6 +100,7 @@ impl DDTex2Image {
     }
 }
 
+#[allow(unused_variables)]
 impl GenericImage for DDTex2Image {
     type Pixel = image::Rgba<u8>;
 

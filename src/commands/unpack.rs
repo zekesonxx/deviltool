@@ -1,13 +1,11 @@
 
 use clap::ArgMatches;
-use time::strptime;
 
 use std::io::prelude::*;
-use std::io::{BufReader, BufWriter, SeekFrom};
+use std::io::{BufReader, SeekFrom};
 use std::fs::{self, File};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use nom::IResult::*;
-use nom::Needed::Size;
 use filetime::{self, FileTime};
 
 use super::super::types::*;
@@ -22,7 +20,7 @@ pub fn execute(matches: &ArgMatches) {
     let mut reader = BufReader::new(f);
     let mut firstfolder = true;
     match parser::read_header(&mut reader).unwrap() {
-        Ok((header, mut files)) => {
+        Ok((_, mut files)) => {
             if !matches.is_present("nofolders") { files.reverse(); }
             for file in files {
                 if file.file_type == DDFiletype::FolderMarker {

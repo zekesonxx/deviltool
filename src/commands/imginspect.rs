@@ -1,11 +1,9 @@
 use clap::ArgMatches;
 use nom::IResult::*;
-use image::{self, GenericImage, ImageBuffer};
 
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::fs::File;
-use std::path::PathBuf;
 
 use super::super::tex2;
 

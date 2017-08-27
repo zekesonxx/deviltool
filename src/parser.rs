@@ -1,7 +1,7 @@
 
 
 use std::io::prelude::*;
-use std::io::{self, Write, BufReader};
+use std::io;
 use nom::{IError, le_u16, le_u32};
 use nom::IResult::*;
 use nom::Needed::Size;

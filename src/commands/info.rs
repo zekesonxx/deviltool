@@ -7,7 +7,6 @@ use std::fs::File;
 use nom::IResult;
 use bytesize::ByteSize;
 
-use super::super::types::*;
 use super::super::parser;
 use super::super::tex2;
 

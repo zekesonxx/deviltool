@@ -1,14 +1,14 @@
 
 use clap::ArgMatches;
-use filetime::{self, FileTime};
+use filetime::FileTime;
 
 use std::io::prelude::*;
-use std::io::{BufReader, BufWriter, SeekFrom};
+use std::io::{BufWriter, SeekFrom};
 use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use byteorder::{LittleEndian, WriteBytesExt};
 
-use super::super::types::{self, DDMainHeader, DDSubFileHeader, DDFiletype};
+use super::super::types::{DDSubFileHeader, DDFiletype};
 
 pub fn execute(matches: &ArgMatches) {
     let folder = PathBuf::from(matches.value_of("DIR").unwrap());
@@ -30,13 +30,13 @@ pub fn execute(matches: &ArgMatches) {
     //TODO replace this with a smaller buffer in a loop
     let mut biggest_file_size: usize = 0;
 
-    let mut iter = folder.read_dir().unwrap();
+    let iter = folder.read_dir().unwrap();
     println!("## Building file list");
     for file in iter {
         let file = file.unwrap();
         let filesize = file.metadata().unwrap().len() as u32;
         let filepath = file.path();
-        let mut filetype;
+        let filetype;
 
         // Determine saved filename
         let mut filename = file.path();
