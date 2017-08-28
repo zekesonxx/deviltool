@@ -1,5 +1,9 @@
+// `error_chain!` can recurse deeply
+#![recursion_limit = "1024"]
+
 #[macro_use] extern crate nom;
 #[macro_use] extern crate clap;
+#[macro_use] extern crate error_chain;
 extern crate time;
 extern crate filetime;
 extern crate image;
@@ -11,7 +15,16 @@ pub mod tex2;
 pub mod types;
 mod commands;
 
-fn main() {
+mod errors {
+    // Create the Error, ErrorKind, ResultExt, and Result types
+    error_chain! { }
+}
+
+use errors::*;
+
+quick_main!(run);
+
+fn run() -> Result<()> {
     let file_exists = |path| {
         if std::fs::metadata(path).is_ok() {
             Ok(())
@@ -81,11 +94,12 @@ fn main() {
     ).get_matches();
 
     match matches.subcommand() {
-        ("info", Some(matches)) => commands::info::execute(matches),
+        ("info", Some(matches)) => commands::info::execute(matches)?,
         ("unpack", Some(matches)) => commands::unpack::execute(matches),
         ("imgconv", Some(matches)) => commands::imgconv::execute(matches),
         ("pack", Some(matches)) => commands::pack::execute(matches),
         ("imginspect", Some(matches)) => commands::imginspect::execute(matches),
         (_, _) => {}
     }
+    Ok(())
 }

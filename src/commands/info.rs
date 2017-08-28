@@ -2,13 +2,14 @@
 use clap::ArgMatches;
 use time::strptime;
 
-use std::io::{self, BufReader, Read, Seek, SeekFrom};
+use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::fs::File;
 use nom::IResult;
 use bytesize::ByteSize;
 
 use super::super::parser;
 use super::super::tex2;
+use super::super::errors::*;
 
 #[derive(Debug, PartialEq)]
 enum GuessedFormat {
@@ -19,29 +20,22 @@ enum GuessedFormat {
     Unknown
 }
 
-pub fn execute(matches: &ArgMatches) {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     let f = File::open(matches.value_of("FILE").unwrap()).unwrap();
     let mut reader = BufReader::new(f);
 
-    let format = match guess_format(&mut reader) {
-        Ok(format) => format,
-        Err(e) => {
-            println!("Failed to read file somehow!");
-            println!("{:?}", e);
-            return;
-        }
-    };
+    let format = guess_format(&mut reader).chain_err(|| "Failed to open file")?;
 
     use self::GuessedFormat::*;
     match format {
         DDArchive => {
-            archive_info(matches, &mut reader);
+            archive_info(matches, &mut reader)?;
         },
         Texture2 => {
-            texture_info(matches, &mut reader);
+            texture_info(matches, &mut reader)?;
         },
         GLSLShader => {
-            glsl_info(matches, &mut reader);
+            glsl_info(matches, &mut reader)?;
         },
         HRTF => {
             println!("{}: HRTF/mhr file (generic OpenAL asset)", matches.value_of("FILE").unwrap());
@@ -53,17 +47,18 @@ pub fn execute(matches: &ArgMatches) {
             println!("{}: unknown", matches.value_of("FILE").unwrap());
         }
     }
+    Ok(())
 }
 
-fn guess_format<R: Read + Seek>(mut reader: &mut R) -> io::Result<GuessedFormat> {
+fn guess_format<R: Read + Seek>(mut reader: &mut R) -> Result<GuessedFormat> {
     use self::GuessedFormat::*;
 
     // Read out the first 40 bytes of the file
     // And use that to take guesses at it
     let mut buf = vec![0u8; 40];
-    reader.read_exact(&mut buf[..])?;
+    reader.read_exact(&mut buf[..]).chain_err(|| "Failed to read file")?;
     // restart the position for whatever wants to read this next
-    reader.seek(SeekFrom::Start(0));
+    reader.seek(SeekFrom::Start(0)).chain_err(|| "Failed to reset file read position")?;
 
     // Start with an archive
     if let IResult::Done(_, _) = parser::mainheader(&buf) {
@@ -90,8 +85,8 @@ fn guess_format<R: Read + Seek>(mut reader: &mut R) -> io::Result<GuessedFormat>
     Ok(Unknown)
 }
 
-fn archive_info<R: Read>(matches: &ArgMatches, mut reader: &mut R) -> io::Result<()> {
-    if let Ok((header, files)) = parser::read_header(&mut reader)? {
+fn archive_info<R: Read>(matches: &ArgMatches, mut reader: &mut R) -> Result<()> {
+    if let Ok((header, files)) = parser::read_header(&mut reader).chain_err(|| "Failed to parse archive header")? {
         let totalsize = files.iter().fold(0, |acc, ref x| acc + x.size) as usize;
         println!("{filename}: dd archive, {header} byte header, {count} file{countplural}, totaling {total}",
                  filename=matches.value_of("FILE").unwrap(),
@@ -136,9 +131,9 @@ fn archive_info<R: Read>(matches: &ArgMatches, mut reader: &mut R) -> io::Result
     Ok(())
 }
 
-fn texture_info<R: Read>(matches: &ArgMatches, mut reader: &mut R) -> io::Result<()> {
+fn texture_info<R: Read>(matches: &ArgMatches, mut reader: &mut R) -> Result<()> {
     let mut buf = vec![0u8; 11];
-    reader.read_exact(&mut buf[..])?;
+    reader.read_exact(&mut buf[..]).chain_err(|| "Unable to read texture file header")?;
     if let IResult::Done(_, info) = tex2::tex2_header(&buf) {
         println!("{}: texture2, {}x{}, {} mipmap level{}",
                  matches.value_of("FILE").unwrap(),
@@ -153,9 +148,9 @@ fn texture_info<R: Read>(matches: &ArgMatches, mut reader: &mut R) -> io::Result
     Ok(())
 }
 
-fn glsl_info<R: Read>(matches: &ArgMatches, mut reader: &mut R) -> io::Result<()> {
+fn glsl_info<R: Read>(matches: &ArgMatches, mut reader: &mut R) -> Result<()> {
     let mut buf = vec![];
-    reader.read_to_end(&mut buf)?;
+    reader.read_to_end(&mut buf).chain_err(|| "unable to read out GLSL file")?;
     if let IResult::Done(_, info) = parser::glsl_file(&buf) {
         println!("{}: glsl vert+frag shader \"{}\"",
                  matches.value_of("FILE").unwrap(),
