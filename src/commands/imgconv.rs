@@ -1,6 +1,6 @@
 
 use clap::ArgMatches;
-use nom::IResult::*;
+use nom::IResult;
 use image::{self, GenericImage, ImageBuffer};
 
 use std::io::prelude::*;
@@ -10,16 +10,10 @@ use std::path::{Path, PathBuf};
 use std::process::exit;
 
 use super::super::tex2;
+use super::super::errors::*;
 
-pub fn execute(matches: &ArgMatches) {
-    let mut tex2image = match read_tex2(matches.value_of("FILE").unwrap()) {
-        Ok(t) => t,
-        Err(e) => {
-            println!("Failed to read file {}", matches.value_of("FILE").unwrap());
-            println!("{:?}", e);
-            exit(1);
-        }
-    };
+pub fn execute(matches: &ArgMatches) -> Result<()> {
+    let mut tex2image = read_tex2(matches.value_of("FILE").unwrap()).chain_err(|| "Failed to open input file")?;
 
     let mut output_file = if matches.is_present("OUTFILE") {
         PathBuf::from(matches.value_of("OUTFILE").unwrap())
@@ -52,6 +46,7 @@ pub fn execute(matches: &ArgMatches) {
             }
         }
     }
+    Ok(())
 }
 
 pub fn read_tex2<P: AsRef<Path>>(file: P) -> io::Result<tex2::DDTex2Image> {
@@ -60,26 +55,26 @@ pub fn read_tex2<P: AsRef<Path>>(file: P) -> io::Result<tex2::DDTex2Image> {
     let mut buf: Vec<u8> = Vec::with_capacity(5000);
     reader.read_to_end(&mut buf)?;
     match tex2::tex2_image(buf.as_ref()) {
-        Done(_, tex2image) => {
+        IResult::Done(_, tex2image) => {
             return Ok(tex2image);
         },
-        Error(err) => {
+        IResult::Error(err) => {
             println!("Failed to read tex2 image");
             println!("{}", err.description());
             exit(1);
         },
-        Incomplete(needed) => {
+        IResult::Incomplete(needed) => {
             println!("need {:?} more bytes", needed);
             exit(1);
         }
     }
 }
 
-pub fn save_to_png<P: AsRef<Path>>(output_file: P, tex2img: &tex2::DDTex2Image) -> io::Result<()> {
+pub fn save_to_png<P: AsRef<Path>>(output_file: P, tex2img: &tex2::DDTex2Image) -> Result<()> {
     let mut img = ImageBuffer::new(tex2img.cur_width(), tex2img.cur_height());
     img.copy_from(tex2img, 0, 0);
 
-    let ref mut fout = File::create(output_file)?;
-    image::ImageRgba8(img).save(fout, image::PNG);
+    let ref mut fout = File::create(output_file).chain_err(|| "Failed to open output image file")?;
+    image::ImageRgba8(img).save(fout, image::PNG).chain_err(|| "Failed to save output image")?;
     Ok(())
 }
