@@ -47,7 +47,7 @@ fn run() -> Result<()> {
         }
     };
 
-    let matches: clap::ArgMatches = clap_app!(myapp =>
+    let matches: clap::ArgMatches = clap_app!(deviltool =>
         (@setting ArgRequiredElseHelp)
         (version: crate_version!())
         (author: crate_authors!())
