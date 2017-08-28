@@ -9,13 +9,13 @@ use std::path::PathBuf;
 use byteorder::{LittleEndian, WriteBytesExt};
 
 use super::super::types::{DDSubFileHeader, DDFiletype};
+use super::super::errors::*;
 
-pub fn execute(matches: &ArgMatches) {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     let folder = PathBuf::from(matches.value_of("DIR").unwrap());
     if !folder.is_dir() {
         //TODO this is a horrible error message
-        println!("You need to pass us a folder!");
-        return;
+        panic!("This is an error message that shouldn't happen but does because clap");
     }
 
     // Array of files that will be in the header
@@ -30,43 +30,44 @@ pub fn execute(matches: &ArgMatches) {
     //TODO replace this with a smaller buffer in a loop
     let mut biggest_file_size: usize = 0;
 
-    let iter = folder.read_dir().unwrap();
+    let iter = folder.read_dir().chain_err(|| "Failed to read file list from directory")?;
     println!("## Building file list");
     for file in iter {
         let file = file.unwrap();
-        let filesize = file.metadata().unwrap().len() as u32;
+        let metadata = file.metadata().chain_err(|| "Failed to read file metadata")?;
+        let filesize = metadata.len() as u32;
         let filepath = file.path();
         let filetype;
 
         // Determine saved filename
         let mut filename = file.path();
         filename.set_extension("");
-        let filename = filename.file_name().unwrap().to_os_string().into_string().unwrap();
+        let filename = String::from(filename.file_name().unwrap().to_string_lossy());
 
         // Determine file type
 
         if let Some(ext) = filepath.extension() {
-            match DDFiletype::from_extension(ext.to_str().unwrap()) {
+            match DDFiletype::from_extension(&ext.to_string_lossy()) {
                 Some(newtype) => {
                     filetype = newtype;
                 },
                 None => {
                     println!("{}: Unrecognized file type {:?}", filepath.display(), ext);
                     println!("TODO: implement .dd_0xXX detection");
-                    return;
+                    panic!(); //TODO this
                 }
             }
         } else {
             println!("{} has no extension, so we can't determine its file type.", filepath.display());
             println!("If you need to pass a custom type, use .dd_0xXX, where XX is a number between 00 and FF.");
-            return;
+            panic!(); //TODO this
         }
 
         // Determine Timestamp
         let mtime = if matches.is_present("zerotime") {
             0u32
         } else {
-            FileTime::from_last_modification_time(&file.metadata().unwrap()).seconds_relative_to_1970() as u32
+            FileTime::from_last_modification_time(&metadata).seconds_relative_to_1970() as u32
         };
 
         //TODO remove this because it's dumb
@@ -109,45 +110,50 @@ pub fn execute(matches: &ArgMatches) {
 
 
     println!("Beginning file output");
-    let mut output_archive = BufWriter::new(File::create(matches.value_of("ARCHIVE").unwrap()).unwrap());
+    let mut output_archive = BufWriter::new(File::create(matches.value_of("ARCHIVE").unwrap())
+        .chain_err(|| "Failed to open output archive")?);
 
     //TODO switch this to a struct
-    output_archive.write(b":hx:rg:\x01");
-    output_archive.write_u32::<LittleEndian>(total_subheader_length);
+    output_archive.write(b":hx:rg:\x01")
+        .chain_err(|| "Failed to write magic bytes to output file")?;
+    output_archive.write_u32::<LittleEndian>(total_subheader_length)
+        .chain_err(|| "Failed to write header start to output file")?;
     println!("Wrote main header");
 
     // Export the whole subheader section
     let mut cur_offset: u32 = files_start_at;
     for &mut (_, ref mut subheader) in files.iter_mut() {
         subheader.offset = cur_offset;
-        subheader.write(&mut output_archive);
+        subheader.write(&mut output_archive)
+            .chain_err(|| format!("Failed to write header for file {} to output archive", subheader.filename))?;
         cur_offset += subheader.size;
     }
     // Double null byte to signify header end
-    output_archive.write(&[0, 0]);
+    output_archive.write(&[0, 0]).chain_err(|| "Failed to write header end to output file")?;
     println!("Wrote subheader");
 
     // Let's start reading files!
-    // Preallocate ~60MB because avoid reallocs
+    // Preallocate the size of the biggest file because avoid reallocs
     let mut buf = Vec::with_capacity(biggest_file_size);
     for (filepath, subheader) in files {
-        let mut reader = File::open(filepath.clone()).unwrap();
-        let result = reader.read_to_end(&mut buf);
-        if let Ok(a) = result {
-            if a as u32 != subheader.size {
-                println!("Something changed the file {}!", filepath.display());
-                println!("The size isn't the same anymore!");
-                return;
-            }
-        } else {
-            println!("Failed to read file {}", filepath.display());
-            return;
+        let mut reader = File::open(filepath.clone())
+            .chain_err(|| format!("Failed to open file {}", filepath.display()))?;
+        let bytes_read = reader.read_to_end(&mut buf)
+            .chain_err(|| format!("Failed to read file {}", filepath.display()))?;
+
+        if bytes_read as u32 != subheader.size {
+            return Err(format!("Something changed the file {} very quickly. {}", filepath.display(),
+                               "We detect and deny this to prevent a race condition.").into());
         }
-        output_archive.seek(SeekFrom::Start(subheader.offset as u64));
-        output_archive.write_all(&mut buf.as_ref());
+
+        output_archive.seek(SeekFrom::Start(subheader.offset as u64))
+            .chain_err(|| "Failed to seek within output file")?;
+        output_archive.write_all(&mut buf.as_ref())
+            .chain_err(|| "Failed to write to output file")?;
         buf.clear();
         println!("Wrote {}", subheader.filename);
     }
 
     println!("Built archive {}", matches.value_of("ARCHIVE").unwrap());
+    Ok(())
 }

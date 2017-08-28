@@ -97,7 +97,7 @@ fn run() -> Result<()> {
         ("info", Some(matches)) => commands::info::execute(matches)?,
         ("unpack", Some(matches)) => commands::unpack::execute(matches)?,
         ("imgconv", Some(matches)) => commands::imgconv::execute(matches)?,
-        ("pack", Some(matches)) => commands::pack::execute(matches),
+        ("pack", Some(matches)) => commands::pack::execute(matches)?,
         ("imginspect", Some(matches)) => commands::imginspect::execute(matches),
         (_, _) => {}
     }
